@@ -54,7 +54,7 @@ const returnUrl = computed(() => props.section === 'onboardings'
     </div>
     <div class="min-h-0 flex-1">
       <OrganizationListPage v-if="props.section === 'organizations' && !props.organizationId" :api="api" />
-      <OrganizationDetailPage v-else-if="props.section === 'organizations'" :api="api" :organization-id="props.organizationId!" />
+      <OrganizationDetailPage v-else-if="props.section === 'organizations'" :api="api" :organization-id="props.organizationId!" :capabilities="props.capabilities" />
       <PlatformAuditPage v-else-if="props.section === 'audit'" :api="api" />
       <OnboardingListPage v-else-if="props.onboardingPage === 'list'" :api="api" />
       <NewOnboardingPage v-else-if="props.onboardingPage === 'new'" :api="api" />

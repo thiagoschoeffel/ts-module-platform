@@ -19,6 +19,30 @@ export interface PlatformOrganization {
   version: number
 }
 
+export interface SaasPlanVersion {
+  id: string
+  code: string
+  name: string
+  version: number
+  entitlements: string[]
+}
+
+export interface OrganizationSaasSubscription {
+  planVersionId: string
+  planCode: string
+  planName: string
+  planVersion: number
+  entitlements: string[]
+  version: number
+}
+
+export interface OrganizationLifecycleResult {
+  id: string
+  status: OrganizationStatus
+  version: number
+  subscription: OrganizationSaasSubscription | null
+}
+
 export interface PlatformAuditEvent {
   id: string
   actorUserId: string | null

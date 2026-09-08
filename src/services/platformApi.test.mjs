@@ -45,3 +45,17 @@ test('preserva detalhe seguro de ProblemDetails', async () => {
 
   await assert.rejects(() => api.createOnboarding({ name: 'Empresa B', slug: 'empresa-b', ownerEmail: 'owner@empresa.test', timeZone: 'UTC', locale: 'pt-BR' }, 'request-a'), /chave idempotente/i)
 })
+
+test('envia versão concorrente e motivo nas ações administrativas', async () => {
+  let captured
+  const api = createPlatformApi(async (path, init) => {
+    captured = { path, init }
+    return new Response(JSON.stringify({ id: 'organization-a', status: 'Suspended', version: 8, subscription: null }), { status: 200 })
+  })
+
+  await api.changeOrganizationStatus('organization-a', 'suspension', 7, 'Solicitação administrativa.')
+
+  assert.equal(captured.path, '/api/platform/organizations/organization-a/suspension')
+  assert.equal(captured.init.method, 'POST')
+  assert.deepEqual(JSON.parse(captured.init.body), { expectedVersion: 7, reason: 'Solicitação administrativa.' })
+})
