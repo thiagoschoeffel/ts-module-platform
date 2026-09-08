@@ -1,7 +1,7 @@
 import type { CreatePlatformOnboarding, OnboardingStatus, PageResult, PlatformAuditEvent,
   PlatformOnboardingAccepted, PlatformOnboardingDetail, PlatformOnboardingSummary,
-  OrganizationLifecycleResult, OrganizationSaasSubscription, PlatformOrganization,
-  PlatformRequest, SaasPlanVersion } from '../types/platform'
+  ExternalIntegration, OrganizationLifecycleResult, OrganizationSaasSubscription, PlatformOrganization,
+  PlatformRequest, SaasPlanVersion, SaveWhatsAppIntegration } from '../types/platform'
 
 export function createPlatformApi(request: PlatformRequest) {
   async function json<T>(path: string, init?: RequestInit): Promise<T> {
@@ -39,6 +39,19 @@ export function createPlatformApi(request: PlatformRequest) {
       return json<OrganizationLifecycleResult>(`/api/platform/organizations/${encodeURIComponent(id)}/${action}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ expectedVersion, reason }),
+      })
+    },
+    listIntegrations(id: string) {
+      return json<ExternalIntegration[]>(`/api/platform/organizations/${encodeURIComponent(id)}/integrations`)
+    },
+    saveWhatsAppIntegration(id: string, input: SaveWhatsAppIntegration) {
+      return json<ExternalIntegration>(`/api/platform/organizations/${encodeURIComponent(id)}/integrations/whatsapp`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
+      })
+    },
+    disableIntegration(organizationId: string, connectionId: string, expectedVersion: number) {
+      return json<ExternalIntegration>(`/api/platform/organizations/${encodeURIComponent(organizationId)}/integrations/${encodeURIComponent(connectionId)}/disable`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expectedVersion }),
       })
     },
     listAudit(params: URLSearchParams) {

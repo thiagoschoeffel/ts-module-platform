@@ -43,6 +43,43 @@ export interface OrganizationLifecycleResult {
   subscription: OrganizationSaasSubscription | null
 }
 
+export type ExternalIntegrationStatus = 'PendingVerification' | 'Active' | 'Disabled'
+export type ExternalIntegrationHealth = 'Unknown' | 'Healthy' | 'Degraded'
+
+export interface ExternalIntegration {
+  id: string
+  organizationId: string
+  provider: 'WhatsApp'
+  displayName: string
+  externalAccountId: string
+  assetId: string
+  assetLabel: string
+  status: ExternalIntegrationStatus
+  health: ExternalIntegrationHealth
+  lastHealthCheckAt: string | null
+  lastHealthError: string | null
+  hasAccessToken: boolean
+  hasAppSecret: boolean
+  hasWebhookVerifyToken: boolean
+  freeServiceMessageLimit: number
+  automationPauseAt: number
+  webhookPath: string
+  version: number
+}
+
+export interface SaveWhatsAppIntegration {
+  displayName: string
+  externalAccountId: string
+  phoneNumberId: string
+  businessPhoneNumber: string
+  accessToken: string | null
+  appSecret: string | null
+  webhookVerifyToken: string | null
+  freeServiceMessageLimit: number
+  automationPauseAt: number
+  expectedVersion: number | null
+}
+
 export interface PlatformAuditEvent {
   id: string
   actorUserId: string | null

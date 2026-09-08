@@ -59,3 +59,23 @@ test('envia versão concorrente e motivo nas ações administrativas', async () 
   assert.equal(captured.init.method, 'POST')
   assert.deepEqual(JSON.parse(captured.init.body), { expectedVersion: 7, reason: 'Solicitação administrativa.' })
 })
+
+test('atualiza conexão por empresa sem reenviar segredos mascarados', async () => {
+  let captured
+  const api = createPlatformApi(async (path, init) => {
+    captured = { path, init }
+    return new Response(JSON.stringify({ id: 'connection-a', provider: 'WhatsApp', version: 4 }), { status: 200 })
+  })
+
+  await api.saveWhatsAppIntegration('organization-a', {
+    displayName: 'WhatsApp principal', externalAccountId: 'waba-a', phoneNumberId: 'phone-a',
+    businessPhoneNumber: '+551100000001', accessToken: null, appSecret: null,
+    webhookVerifyToken: null, freeServiceMessageLimit: 1000, automationPauseAt: 970,
+    expectedVersion: 3,
+  })
+
+  assert.equal(captured.path, '/api/platform/organizations/organization-a/integrations/whatsapp')
+  assert.equal(captured.init.method, 'PUT')
+  assert.equal(JSON.parse(captured.init.body).expectedVersion, 3)
+  assert.equal(JSON.parse(captured.init.body).accessToken, null)
+})
