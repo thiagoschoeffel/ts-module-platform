@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
-import { Badge, Button, Card, ChevronLeftIcon, EmptyState, TriangleAlertIcon } from '@thiagoschoeffel/ts-components'
+import { Badge, Button, Card, EmptyState, TriangleAlertIcon } from '@thiagoschoeffel/ts-components'
 import type { BadgeVariant } from '@thiagoschoeffel/ts-components'
 import type { PlatformApi } from '../services/platformApi'
 import type { OrganizationStatus, PlatformOrganization } from '../types/platform'
-import { navigate } from '../utils/navigation'
 
 const props = defineProps<{ api?: PlatformApi; organizationId: string }>()
 const item = ref<PlatformOrganization>()
@@ -23,7 +22,6 @@ onMounted(load); watch(() => props.organizationId, load)
 </script>
 
 <template>
-  <Button variant="secondary" size="small" @click="navigate('/plataforma/empresas')"><template #icon><ChevronLeftIcon /></template>Voltar para empresas</Button>
   <div v-if="loading" class="py-10 text-center text-sm text-slate-500" role="status">Carregando empresa…</div>
   <EmptyState v-else-if="error" title="Não foi possível carregar a empresa" :description="error" role="alert"><template #icon><TriangleAlertIcon /></template><template #action><Button size="small" variant="secondary" @click="load">Tentar novamente</Button></template></EmptyState>
   <div v-else-if="item" class="grid gap-4 md:grid-cols-2">
