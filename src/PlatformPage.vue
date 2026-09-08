@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Building2Icon, ClipboardListIcon, HistoryIcon, PageHeader } from '@thiagoschoeffel/ts-components'
+import { Building2Icon, ChevronLeftIcon, ClipboardListIcon, HistoryIcon, PageHeader } from '@thiagoschoeffel/ts-components'
 import '@thiagoschoeffel/ts-components/style.css'
 import './style.css'
 import OrganizationDetailPage from './pages/OrganizationDetailPage.vue'
@@ -24,16 +24,32 @@ const header = computed(() => props.section === 'audit'
   : props.section === 'onboardings'
     ? { title: 'Onboardings', subtitle: 'Acompanhe a admissão assistida de empresas.', icon: ClipboardListIcon }
     : { title: props.organizationId ? 'Detalhe da empresa' : 'Empresas', subtitle: 'Consulte o registro administrativo do SaaS.', icon: Building2Icon })
+
+function organizationsReturnUrl() {
+  const candidate = new URLSearchParams(window.location.search).get('retorno')
+  return candidate && /^\/plataforma\/empresas(?:\?.*)?$/.test(candidate) ? candidate : '/plataforma/empresas'
+}
 </script>
 
 <template>
-  <div class="isolate space-y-6">
-    <PageHeader :title="header.title" :subtitle="header.subtitle">
-      <template #icon><component :is="header.icon" :size="32" :stroke-width="1.75" /></template>
-    </PageHeader>
-    <OrganizationListPage v-if="props.section === 'organizations' && !props.organizationId" :api="api" />
-    <OrganizationDetailPage v-else-if="props.section === 'organizations'" :api="api" :organization-id="props.organizationId!" />
-    <PlatformAuditPage v-else-if="props.section === 'audit'" :api="api" />
-    <UnavailableOnboardingPage v-else />
+  <div class="isolate flex h-full min-h-0 flex-col gap-4">
+    <div class="ts-responsive-row gap-4">
+      <PageHeader :title="header.title" :subtitle="header.subtitle">
+        <template #icon><component :is="header.icon" :size="32" :stroke-width="1.75" /></template>
+      </PageHeader>
+      <a
+        v-if="props.section === 'organizations' && props.organizationId"
+        :href="organizationsReturnUrl()"
+        class="inline-flex items-center gap-1 text-sm font-medium text-slate-400 transition-colors hover:text-slate-800 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
+        <ChevronLeftIcon class="size-4" aria-hidden="true" />
+        Voltar para empresas
+      </a>
+    </div>
+    <div class="min-h-0 flex-1">
+      <OrganizationListPage v-if="props.section === 'organizations' && !props.organizationId" :api="api" />
+      <OrganizationDetailPage v-else-if="props.section === 'organizations'" :api="api" :organization-id="props.organizationId!" />
+      <PlatformAuditPage v-else-if="props.section === 'audit'" :api="api" />
+      <UnavailableOnboardingPage v-else />
+    </div>
   </div>
 </template>
