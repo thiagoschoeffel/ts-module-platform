@@ -1,6 +1,7 @@
 import type { CreatePlatformOnboarding, OnboardingStatus, PageResult, PlatformAuditEvent,
   PlatformOnboardingAccepted, PlatformOnboardingDetail, PlatformOnboardingSummary,
-  PlatformOrganization, PlatformRequest } from '../types/platform'
+  OrganizationLifecycleResult, OrganizationSaasSubscription, PlatformOrganization,
+  PlatformRequest, SaasPlanVersion } from '../types/platform'
 
 export function createPlatformApi(request: PlatformRequest) {
   async function json<T>(path: string, init?: RequestInit): Promise<T> {
@@ -20,6 +21,25 @@ export function createPlatformApi(request: PlatformRequest) {
     },
     getOrganization(id: string) {
       return json<PlatformOrganization>(`/api/platform/organizations/${encodeURIComponent(id)}`)
+    },
+    listSaasPlans() {
+      return json<SaasPlanVersion[]>('/api/platform/saas-plans')
+    },
+    getSaasSubscription(id: string) {
+      return json<OrganizationSaasSubscription | null>(`/api/platform/organizations/${encodeURIComponent(id)}/saas-subscription`)
+    },
+    assignSaasPlan(id: string, planVersionId: string, expectedVersion: number | null) {
+      return json<OrganizationLifecycleResult>(`/api/platform/organizations/${encodeURIComponent(id)}/saas-subscription`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planVersionId, expectedVersion }),
+      })
+    },
+    changeOrganizationStatus(id: string, action: 'activation' | 'suspension' | 'reactivation',
+      expectedVersion: number, reason: string) {
+      return json<OrganizationLifecycleResult>(`/api/platform/organizations/${encodeURIComponent(id)}/${action}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expectedVersion, reason }),
+      })
     },
     listAudit(params: URLSearchParams) {
       return json<PageResult<PlatformAuditEvent>>(`/api/platform/audit-events?${params}`)
