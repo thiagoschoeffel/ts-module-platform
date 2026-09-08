@@ -5,8 +5,10 @@ import '@thiagoschoeffel/ts-components/style.css'
 import './style.css'
 import OrganizationDetailPage from './pages/OrganizationDetailPage.vue'
 import OrganizationListPage from './pages/OrganizationListPage.vue'
+import OnboardingDetailPage from './pages/OnboardingDetailPage.vue'
+import OnboardingListPage from './pages/OnboardingListPage.vue'
+import NewOnboardingPage from './pages/NewOnboardingPage.vue'
 import PlatformAuditPage from './pages/PlatformAuditPage.vue'
-import UnavailableOnboardingPage from './pages/UnavailableOnboardingPage.vue'
 import { createPlatformApi } from './services/platformApi'
 import type { PlatformPageProps } from './types/platform'
 
@@ -29,6 +31,11 @@ function organizationsReturnUrl() {
   const candidate = new URLSearchParams(window.location.search).get('retorno')
   return candidate && /^\/plataforma\/empresas(?:\?.*)?$/.test(candidate) ? candidate : '/plataforma/empresas'
 }
+
+const showReturn = computed(() => (props.section === 'organizations' && props.organizationId)
+  || (props.section === 'onboardings' && props.onboardingPage !== 'list'))
+const returnUrl = computed(() => props.section === 'onboardings'
+  ? '/plataforma/onboardings' : organizationsReturnUrl())
 </script>
 
 <template>
@@ -38,8 +45,8 @@ function organizationsReturnUrl() {
         <template #icon><component :is="header.icon" :size="32" :stroke-width="1.75" /></template>
       </PageHeader>
       <a
-        v-if="props.section === 'organizations' && props.organizationId"
-        :href="organizationsReturnUrl()"
+        v-if="showReturn"
+        :href="returnUrl"
         class="inline-flex items-center gap-1 text-sm font-medium text-slate-400 transition-colors hover:text-slate-800 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
         <ChevronLeftIcon class="size-4" aria-hidden="true" />
         Voltar para empresas
@@ -49,7 +56,9 @@ function organizationsReturnUrl() {
       <OrganizationListPage v-if="props.section === 'organizations' && !props.organizationId" :api="api" />
       <OrganizationDetailPage v-else-if="props.section === 'organizations'" :api="api" :organization-id="props.organizationId!" />
       <PlatformAuditPage v-else-if="props.section === 'audit'" :api="api" />
-      <UnavailableOnboardingPage v-else />
+      <OnboardingListPage v-else-if="props.onboardingPage === 'list'" :api="api" />
+      <NewOnboardingPage v-else-if="props.onboardingPage === 'new'" :api="api" />
+      <OnboardingDetailPage v-else :api="api" :onboarding-id="props.onboardingId!" />
     </div>
   </div>
 </template>

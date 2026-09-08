@@ -22,3 +22,26 @@ test('não transforma resposta proibida em sucesso local', async () => {
 
   await assert.rejects(() => api.getOrganization('organization-a'), /não possui permissão/i)
 })
+
+test('inicia onboarding com corpo tipado e chave idempotente', async () => {
+  let captured
+  const api = createPlatformApi(async (path, init) => {
+    captured = { path, init }
+    return new Response(JSON.stringify({ onboardingId: 'onboarding-a', operationId: 'operation-a', status: 'Pending' }), { status: 202 })
+  })
+
+  await api.createOnboarding({ name: 'Empresa B', slug: 'empresa-b', ownerEmail: 'owner@empresa.test', timeZone: 'America/Sao_Paulo', locale: 'pt-BR' }, 'request-a')
+
+  assert.equal(captured.path, '/api/platform/onboardings')
+  assert.equal(captured.init.method, 'POST')
+  assert.equal(captured.init.headers['Idempotency-Key'], 'request-a')
+  assert.equal(JSON.parse(captured.init.body).slug, 'empresa-b')
+})
+
+test('preserva detalhe seguro de ProblemDetails', async () => {
+  const api = createPlatformApi(async () => new Response(JSON.stringify({ detail: 'A chave idempotente já foi usada.' }), {
+    status: 409, headers: { 'content-type': 'application/problem+json' },
+  }))
+
+  await assert.rejects(() => api.createOnboarding({ name: 'Empresa B', slug: 'empresa-b', ownerEmail: 'owner@empresa.test', timeZone: 'UTC', locale: 'pt-BR' }, 'request-a'), /chave idempotente/i)
+})
