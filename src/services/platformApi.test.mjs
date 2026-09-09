@@ -17,6 +17,27 @@ test('consulta empresas somente pelo transporte de plataforma recebido do host',
   assert.equal(requestedPath, '/api/platform/organizations?page=1&pageSize=20')
 })
 
+test('serializa ordenação das listas com os nomes dos enums aceitos pela API', async () => {
+  const requestedPaths = []
+  const api = createPlatformApi(async path => {
+    requestedPaths.push(path)
+    return new Response(JSON.stringify({ items: [], page: 1, pageSize: 20, total: 0 }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    })
+  })
+
+  await api.listOrganizations(new URLSearchParams({ sortBy: 'name', sortDirection: 'asc' }))
+  await api.listOnboardings(new URLSearchParams({ sortBy: 'updatedAt', sortDirection: 'desc' }))
+  await api.listAudit(new URLSearchParams({ sortBy: 'occurredAt', sortDirection: 'desc' }))
+
+  assert.deepEqual(requestedPaths, [
+    '/api/platform/organizations?sortBy=Name&sortDirection=Asc',
+    '/api/platform/onboardings?sortBy=UpdatedAt&sortDirection=Desc',
+    '/api/platform/audit-events?sortBy=OccurredAt&sortDirection=Desc',
+  ])
+})
+
 test('não transforma resposta proibida em sucesso local', async () => {
   const api = createPlatformApi(async () => new Response(null, { status: 403 }))
 

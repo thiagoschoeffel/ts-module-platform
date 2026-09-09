@@ -3,6 +3,15 @@ import type { CreatePlatformOnboarding, OnboardingStatus, PageResult, PlatformAu
   ExternalIntegration, OrganizationLifecycleResult, OrganizationSaasSubscription, PlatformOrganization,
   PlatformRequest, SaasPlanVersion, SaveWhatsAppIntegration } from '../types/platform'
 
+function platformListPath(path: string, params: URLSearchParams) {
+  const query = new URLSearchParams(params)
+  for (const key of ['sortBy', 'sortDirection']) {
+    const value = query.get(key)
+    if (value) query.set(key, `${value[0].toUpperCase()}${value.slice(1)}`)
+  }
+  return `${path}?${query}`
+}
+
 export function createPlatformApi(request: PlatformRequest) {
   async function json<T>(path: string, init?: RequestInit): Promise<T> {
     const response = await request(path, init)
@@ -17,7 +26,7 @@ export function createPlatformApi(request: PlatformRequest) {
 
   return {
     listOrganizations(params: URLSearchParams) {
-      return json<PageResult<PlatformOrganization>>(`/api/platform/organizations?${params}`)
+      return json<PageResult<PlatformOrganization>>(platformListPath('/api/platform/organizations', params))
     },
     getOrganization(id: string) {
       return json<PlatformOrganization>(`/api/platform/organizations/${encodeURIComponent(id)}`)
@@ -55,10 +64,10 @@ export function createPlatformApi(request: PlatformRequest) {
       })
     },
     listAudit(params: URLSearchParams) {
-      return json<PageResult<PlatformAuditEvent>>(`/api/platform/audit-events?${params}`)
+      return json<PageResult<PlatformAuditEvent>>(platformListPath('/api/platform/audit-events', params))
     },
     listOnboardings(params: URLSearchParams) {
-      return json<PageResult<PlatformOnboardingSummary>>(`/api/platform/onboardings?${params}`)
+      return json<PageResult<PlatformOnboardingSummary>>(platformListPath('/api/platform/onboardings', params))
     },
     getOnboarding(id: string) {
       return json<PlatformOnboardingDetail>(`/api/platform/onboardings/${encodeURIComponent(id)}`)
