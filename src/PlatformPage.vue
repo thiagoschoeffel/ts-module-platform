@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Building2Icon, ChevronLeftIcon, ClipboardListIcon, HistoryIcon, PageHeader } from '@thiagoschoeffel/ts-components'
+import { Building2Icon, Button, ChevronLeftIcon, ClipboardListIcon, HistoryIcon, PageHeader } from '@thiagoschoeffel/ts-components'
 import '@thiagoschoeffel/ts-components/style.css'
 import './style.css'
 import OrganizationDetailPage from './pages/OrganizationDetailPage.vue'
@@ -11,6 +11,7 @@ import NewOnboardingPage from './pages/NewOnboardingPage.vue'
 import PlatformAuditPage from './pages/PlatformAuditPage.vue'
 import { createPlatformApi } from './services/platformApi'
 import type { PlatformPageProps } from './types/platform'
+import { navigate } from './utils/navigation'
 
 const props = withDefaults(defineProps<PlatformPageProps>(), {
   section: 'organizations',
@@ -34,6 +35,9 @@ function organizationsReturnUrl() {
 
 const showReturn = computed(() => (props.section === 'organizations' && props.organizationId)
   || (props.section === 'onboardings' && props.onboardingPage !== 'list'))
+const canCreateOrganization = computed(() => props.section === 'organizations'
+  && !props.organizationId
+  && props.capabilities.includes('platform.onboarding.manage'))
 const returnUrl = computed(() => props.section === 'onboardings'
   ? '/plataforma/onboardings' : organizationsReturnUrl())
 </script>
@@ -44,8 +48,9 @@ const returnUrl = computed(() => props.section === 'onboardings'
       <PageHeader :title="header.title" :subtitle="header.subtitle">
         <template #icon><component :is="header.icon" :size="32" :stroke-width="1.75" /></template>
       </PageHeader>
+      <Button v-if="canCreateOrganization" @click="navigate('/plataforma/onboardings/novo')">Cadastrar empresa</Button>
       <a
-        v-if="showReturn"
+        v-else-if="showReturn"
         :href="returnUrl"
         class="inline-flex items-center gap-1 text-sm font-medium text-slate-400 transition-colors hover:text-slate-800 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
         <ChevronLeftIcon class="size-4" aria-hidden="true" />
