@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   ArrowRightIcon, Badge, Building2Icon, Button, Card, DataTable, EmptyState, Input,
   Pagination, SearchIcon, Tabs, TriangleAlertIcon, type BadgeVariant, type DataTableColumn,
-  type DataTableRow, type TabItem
+  type DataTableRow, type DataTableSortDirection, type TabItem
 } from '@thiagoschoeffel/ts-components'
 import type { PlatformApi } from '../services/platformApi'
 import type { OrganizationStatus, PlatformOrganization } from '../types/platform'
@@ -13,11 +13,16 @@ const props = defineProps<{ api?: PlatformApi }>()
 const initial = new URLSearchParams(window.location.search)
 type StatusFilter = 'all' | OrganizationStatus
 const statusFilters = new Set<StatusFilter>(['all', 'Provisioning', 'Active', 'Suspended', 'Archived'])
+type OrganizationSortKey = 'name' | 'slug' | 'status' | 'version'
+const sortKeys = new Set<OrganizationSortKey>(['name', 'slug', 'status', 'version'])
 const search = ref(initial.get('busca') ?? '')
 const debouncedSearch = ref(search.value)
 const requestedStatus = initial.get('status') as StatusFilter
 const status = ref<StatusFilter>(statusFilters.has(requestedStatus) ? requestedStatus : 'all')
 const currentPage = ref(Math.max(1, Number(initial.get('pagina')) || 1))
+const requestedSortKey = initial.get('ordenar') as OrganizationSortKey
+const sortKey = ref<OrganizationSortKey>(sortKeys.has(requestedSortKey) ? requestedSortKey : 'name')
+const sortDirection = ref<DataTableSortDirection>(initial.get('direcao') === 'desc' ? 'desc' : 'asc')
 const items = ref<PlatformOrganization[]>([])
 const total = ref(0)
 const loading = ref(false)
@@ -26,10 +31,10 @@ const pageSize = 20
 let debounce: ReturnType<typeof setTimeout> | undefined
 
 const columns: DataTableColumn[] = [
-  { key: 'name', label: 'Empresa', size: 'large' },
-  { key: 'slug', label: 'Identificador', size: 'medium' },
-  { key: 'status', label: 'Status', size: 'small', align: 'center' },
-  { key: 'version', label: 'Versão', size: 'small', align: 'center' },
+  { key: 'name', label: 'Empresa', size: 'large', sortable: true },
+  { key: 'slug', label: 'Identificador', size: 'medium', sortable: true },
+  { key: 'status', label: 'Status', size: 'small', align: 'center', sortable: true },
+  { key: 'version', label: 'Versão', size: 'small', align: 'center', sortable: true },
 ]
 const tabs: TabItem[] = [
   { value: 'all', label: 'Todas' },
@@ -50,6 +55,8 @@ async function load() {
   error.value = ''
   try {
     const params = new URLSearchParams({ page: String(currentPage.value), pageSize: String(pageSize) })
+    params.set('sortBy', sortKey.value)
+    params.set('sortDirection', sortDirection.value)
     if (debouncedSearch.value.trim()) params.set('search', debouncedSearch.value.trim())
     if (status.value !== 'all') params.set('status', status.value)
     const result = await props.api.listOrganizations(params)
@@ -63,6 +70,8 @@ function persistUrl() {
   if (debouncedSearch.value.trim()) url.searchParams.set('busca', debouncedSearch.value.trim()); else url.searchParams.delete('busca')
   if (status.value !== 'all') url.searchParams.set('status', status.value); else url.searchParams.delete('status')
   if (currentPage.value > 1) url.searchParams.set('pagina', String(currentPage.value)); else url.searchParams.delete('pagina')
+  if (sortKey.value !== 'name') url.searchParams.set('ordenar', sortKey.value); else url.searchParams.delete('ordenar')
+  if (sortDirection.value !== 'asc') url.searchParams.set('direcao', sortDirection.value); else url.searchParams.delete('direcao')
   window.history.replaceState(window.history.state, '', url)
 }
 function clearFilters() { search.value = ''; debouncedSearch.value = ''; status.value = 'all' }
@@ -71,13 +80,17 @@ function details(id: string) {
   navigate(`/plataforma/empresas/${id}?retorno=${encodeURIComponent(current)}`)
 }
 function asOrganization(row: DataTableRow) { return row as unknown as PlatformOrganization }
+function updateSort(state: { key?: string; direction?: DataTableSortDirection }) {
+  sortKey.value = sortKeys.has(state.key as OrganizationSortKey) ? state.key as OrganizationSortKey : 'name'
+  sortDirection.value = state.direction ?? 'asc'
+}
 
 watch(search, value => {
   if (debounce) clearTimeout(debounce)
   debounce = setTimeout(() => { debouncedSearch.value = value; currentPage.value = 1 }, 300)
 })
-watch([debouncedSearch, status], () => { currentPage.value = 1 })
-watch([debouncedSearch, status, currentPage], () => { persistUrl(); void load() })
+watch([debouncedSearch, status, sortKey, sortDirection], () => { currentPage.value = 1 })
+watch([debouncedSearch, status, sortKey, sortDirection, currentPage], () => { persistUrl(); void load() })
 onMounted(load)
 onBeforeUnmount(() => { if (debounce) clearTimeout(debounce) })
 </script>
@@ -115,7 +128,7 @@ onBeforeUnmount(() => { if (debounce) clearTimeout(debounce) })
         </Card>
       </div>
 
-      <DataTable class="desktop-only-flex min-h-0 flex-1" :columns="columns" :rows="error ? [] : rows" :selectable="false" :loading="loading" row-key="id" label="Empresas cadastradas" actions-label="Ação">
+      <DataTable class="desktop-only-flex min-h-0 flex-1" :columns="columns" :rows="error ? [] : rows" :selectable="false" :loading="loading" sort-mode="manual" :sort-key="sortKey" :sort-direction="sortDirection" row-key="id" label="Empresas cadastradas" actions-label="Ação" @sort="updateSort">
         <template #cell-name="{ row }"><p class="font-medium text-slate-800">{{ asOrganization(row).name }}</p><p class="mt-1 text-xs text-slate-400">{{ asOrganization(row).id }}</p></template>
         <template #cell-slug="{ row }"><span class="font-medium text-slate-700">{{ asOrganization(row).slug }}</span></template>
         <template #cell-status="{ row }"><Badge :variant="statusVariant[asOrganization(row).status]">{{ statusLabel[asOrganization(row).status] }}</Badge></template>

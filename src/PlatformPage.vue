@@ -38,6 +38,9 @@ const showReturn = computed(() => (props.section === 'organizations' && props.or
 const canCreateOrganization = computed(() => props.section === 'organizations'
   && !props.organizationId
   && props.capabilities.includes('platform.onboarding.manage'))
+const canCreateOnboarding = computed(() => props.section === 'onboardings'
+  && props.onboardingPage === 'list'
+  && props.capabilities.includes('platform.onboarding.manage'))
 const returnUrl = computed(() => props.section === 'onboardings'
   ? '/plataforma/onboardings' : organizationsReturnUrl())
 </script>
@@ -48,7 +51,7 @@ const returnUrl = computed(() => props.section === 'onboardings'
       <PageHeader :title="header.title" :subtitle="header.subtitle">
         <template #icon><component :is="header.icon" :size="32" :stroke-width="1.75" /></template>
       </PageHeader>
-      <Button v-if="canCreateOrganization" @click="navigate('/plataforma/onboardings/novo')">Cadastrar empresa</Button>
+      <Button v-if="canCreateOrganization || canCreateOnboarding" @click="navigate('/plataforma/onboardings/novo')">Cadastrar empresa</Button>
       <a
         v-else-if="showReturn"
         :href="returnUrl"

@@ -33,7 +33,7 @@ async function submit() {
 </script>
 
 <template>
-  <Card class="mx-auto max-w-2xl">
+  <Card>
     <template #header><div><h2 class="font-semibold text-slate-800">Cadastrar empresa</h2><p class="mt-1 text-sm text-slate-500">A empresa será criada em provisionamento e o proprietário receberá um convite.</p></div></template>
     <form class="grid gap-4 sm:grid-cols-2" @submit.prevent="submit">
       <Input v-model="name" class="sm:col-span-2" label="Nome da empresa" required :maxlength="160" autofocus />

@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   Button, Card, DataTable, EmptyState, HistoryIcon, Input, Pagination, SearchIcon,
-  TriangleAlertIcon, type DataTableColumn, type DataTableRow
+  TriangleAlertIcon, type DataTableColumn, type DataTableRow, type DataTableSortDirection
 } from '@thiagoschoeffel/ts-components'
 import type { PlatformApi } from '../services/platformApi'
 import type { PlatformAuditEvent } from '../types/platform'
@@ -12,6 +12,11 @@ const initial = new URLSearchParams(window.location.search)
 const action = ref(initial.get('acao') ?? '')
 const debouncedAction = ref(action.value)
 const page = ref(Math.max(1, Number(initial.get('pagina')) || 1))
+type AuditSortKey = 'action' | 'actorKind' | 'result' | 'occurredAt'
+const sortKeys = new Set<AuditSortKey>(['action', 'actorKind', 'result', 'occurredAt'])
+const requestedSortKey = initial.get('ordenar') as AuditSortKey
+const sortKey = ref<AuditSortKey>(sortKeys.has(requestedSortKey) ? requestedSortKey : 'occurredAt')
+const sortDirection = ref<DataTableSortDirection>(initial.get('direcao') === 'asc' ? 'asc' : 'desc')
 const pageSize = 20
 const total = ref(0)
 const items = ref<PlatformAuditEvent[]>([])
@@ -20,10 +25,10 @@ const error = ref('')
 let debounce: ReturnType<typeof setTimeout> | undefined
 
 const columns: DataTableColumn[] = [
-  { key: 'action', label: 'Ação', size: 'large' },
-  { key: 'actorKind', label: 'Ator', size: 'medium' },
-  { key: 'result', label: 'Resultado', size: 'small' },
-  { key: 'occurredAt', label: 'Data e hora', size: 'medium' },
+  { key: 'action', label: 'Ação', size: 'large', sortable: true },
+  { key: 'actorKind', label: 'Ator', size: 'medium', sortable: true },
+  { key: 'result', label: 'Resultado', size: 'small', sortable: true },
+  { key: 'occurredAt', label: 'Data e hora', size: 'medium', sortable: true },
 ]
 const rows = computed<DataTableRow[]>(() => items.value.map(item => ({ ...item })))
 const range = computed(() => total.value ? `${(page.value - 1) * pageSize + 1}–${Math.min(page.value * pageSize, total.value)} de ${total.value}` : '0 de 0')
@@ -37,6 +42,8 @@ async function load() {
   error.value = ''
   try {
     const params = new URLSearchParams({ page: String(page.value), pageSize: String(pageSize) })
+    params.set('sortBy', sortKey.value)
+    params.set('sortDirection', sortDirection.value)
     if (debouncedAction.value.trim()) params.set('action', debouncedAction.value.trim())
     const result = await props.api.listAudit(params)
     items.value = result.items
@@ -48,15 +55,22 @@ function persistUrl() {
   const url = new URL(window.location.href)
   if (debouncedAction.value.trim()) url.searchParams.set('acao', debouncedAction.value.trim()); else url.searchParams.delete('acao')
   if (page.value > 1) url.searchParams.set('pagina', String(page.value)); else url.searchParams.delete('pagina')
+  if (sortKey.value !== 'occurredAt') url.searchParams.set('ordenar', sortKey.value); else url.searchParams.delete('ordenar')
+  if (sortDirection.value !== 'desc') url.searchParams.set('direcao', sortDirection.value); else url.searchParams.delete('direcao')
   window.history.replaceState(window.history.state, '', url)
 }
 function clearSearch() { action.value = ''; debouncedAction.value = '' }
+function updateSort(state: { key?: string; direction?: DataTableSortDirection }) {
+  sortKey.value = sortKeys.has(state.key as AuditSortKey) ? state.key as AuditSortKey : 'occurredAt'
+  sortDirection.value = state.direction ?? 'desc'
+}
 
 watch(action, value => {
   if (debounce) clearTimeout(debounce)
   debounce = setTimeout(() => { debouncedAction.value = value; page.value = 1 }, 300)
 })
-watch([debouncedAction, page], () => { persistUrl(); void load() })
+watch([debouncedAction, sortKey, sortDirection], () => { page.value = 1 })
+watch([debouncedAction, sortKey, sortDirection, page], () => { persistUrl(); void load() })
 onMounted(load)
 onBeforeUnmount(() => { if (debounce) clearTimeout(debounce) })
 </script>
@@ -64,7 +78,7 @@ onBeforeUnmount(() => { if (debounce) clearTimeout(debounce) })
 <template>
   <section class="md:flex md:h-full md:min-h-0 md:flex-col" aria-label="Auditoria da plataforma">
     <Card class="md:shrink-0 [&>div]:p-4">
-      <div class="flex justify-end">
+      <div class="flex justify-start">
         <Input v-model="action" type="search" clearable placeholder="Buscar pela ação..." aria-label="Buscar auditoria pela ação" class="w-full sm:max-w-sm"><template #leading><SearchIcon class="size-4 text-slate-400" aria-hidden="true" /></template></Input>
       </div>
     </Card>
@@ -76,7 +90,7 @@ onBeforeUnmount(() => { if (debounce) clearTimeout(debounce) })
         <Card v-for="event in loading ? [] : items" v-else :key="event.id"><div class="flex items-start justify-between gap-3"><p class="font-semibold text-slate-800">{{ event.action }}</p><time class="shrink-0 text-xs text-slate-400">{{ formatDate(event.occurredAt) }}</time></div><p class="mt-2 text-sm text-slate-500">{{ event.actorKind }} · {{ event.result }}</p><p class="mt-1 text-sm text-slate-500">{{ event.reason }}</p><p class="mt-2 break-all font-mono text-[0.6875rem] text-slate-400">{{ event.correlationId }}</p></Card>
       </div>
 
-      <DataTable class="desktop-only-flex min-h-0 flex-1" :columns="columns" :rows="error ? [] : rows" :selectable="false" :loading="loading" row-key="id" label="Eventos administrativos">
+      <DataTable class="desktop-only-flex min-h-0 flex-1" :columns="columns" :rows="error ? [] : rows" :selectable="false" :loading="loading" sort-mode="manual" :sort-key="sortKey" :sort-direction="sortDirection" row-key="id" label="Eventos administrativos" @sort="updateSort">
         <template #cell-action="{ row }"><p class="font-medium text-slate-800">{{ asEvent(row).action }}</p><p class="mt-1 text-xs text-slate-400">{{ asEvent(row).targetType }} · {{ asEvent(row).targetId }}</p></template>
         <template #cell-actorKind="{ row }"><span class="text-slate-700">{{ asEvent(row).actorKind }}</span></template>
         <template #cell-result="{ row }"><p class="font-medium text-slate-700">{{ asEvent(row).result }}</p><p class="mt-1 max-w-60 whitespace-normal text-xs text-slate-500">{{ asEvent(row).reason }}</p></template>
